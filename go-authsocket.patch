@@ -1,0 +1,51 @@
+*** Begin Patch
+*** Add File: go-authsocket/authsocket/handshake.go
++package authsocket
++
++import (
++    "fmt"
++    "github.com/sirdeggen/go-authsocket/internal/wire"
++)
++
++// Client represents a minimal handshake initiator using the drop-in
++// wire format defined in internal/wire. It delegates cryptographic
++// operations to the provided KeyPair (wrapping go-sdk primitives).
++type Client struct {
++    wallet *wire.KeyPair
++}
++
++func NewClient(wallet *wire.KeyPair) *Client {
++    return &Client{wallet: wallet}
++}
++
++// CreateHelloFrame builds the initial Hello frame containing the client's public key.
++func (c *Client) CreateHelloFrame() *wire.Frame {
++    return wire.MustFrameHello(c.wallet.PubKey())
++}
++
++// CreateAuthFrame signs the provided nonce and returns an Auth frame.
++func (c *Client) CreateAuthFrame(nonce []byte) *wire.Frame {
++    sig, _ := c.wallet.Sign(nonce)
++    return wire.MustFrameAuth(sig, c.wallet.PubKey())
++}
++
++// Simple in-process handshake using a server instance.
++// This is for testability and prototyping; production transport
++// would use a real network transport.
++func (c *Client) HandshakeServer(s *Server) error {
++    // Step 1: send Hello
++    hello := c.CreateHelloFrame()
++    nonceFr := s.HandleHello(hello)
++    if nonceFr == nil {
++        return fmt.Errorf("server did not respond with nonce")
++    }
++    // Step 2: sign nonce and send Auth
++    auth := c.CreateAuthFrame(nonceFr.Payload)
++    okFr := s.HandleAuth(auth)
++    if okFr == nil || okFr.Type != wire.FrameTypeOK {
++        return fmt.Errorf("handshake failed on server side")
++    }
++    return nil
++}
++
+*** End Patch
