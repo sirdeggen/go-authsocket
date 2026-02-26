@@ -1,26 +1,38 @@
 package authsocket
 
 import (
-	"github.com/sirdeggen/go-authsocket/internal/wire"
+    "encoding/json"
+    "fmt"
+    "github.com/sirdeggen/go-authsocket/internal/wire"
 )
 
-// Server is a minimal stand-in for a mutual-authsocket server.
-// It currently issues a nonce on Hello and accepts an Auth frame,
-// returning an OK frame to signal success. This is intentionally lightweight
-// to enable early integration tests against the TS client.
 type Server struct{}
 
 func NewServer() *Server { return &Server{} }
 
-// HandleHello receives a Hello frame from a client and returns a Nonce frame.
-func (s *Server) HandleHello(frame *wire.Frame) *wire.Frame {
-	// In a full implementation, you would verify the client's pubkey here.
-	nonce := wire.MakeNonce()
-	return wire.MustFrameNonce(nonce)
+// HandleHello processes a Hello message (AuthMessage JSON) and responds with a nonce as number[] payload
+func (s *Server) HandleHello(raw []byte) ([]byte, error) {
+    var am wire.AuthMessage
+    if err := json.Unmarshal(raw, &am); err != nil {
+        return nil, err
+    }
+    if am.Type != "hello" {
+        return nil, fmt.Errorf("unexpected message type: %s", am.Type)
+    }
+    nonce := wire.MakeNonceIntArray()
+    resp := wire.AuthMessage{Version: "1", Type: "nonce", Payload: nonce}
+    return json.Marshal(resp)
 }
 
-// HandleAuth processes an Auth frame and returns an OK frame on success.
-func (s *Server) HandleAuth(frame *wire.Frame) *wire.Frame {
-	// In a full implementation, you would verify the signature against the nonce.
-	return wire.MustFrameOK()
+// HandleAuth processes an Auth message and returns an OK message on success
+func (s *Server) HandleAuth(raw []byte) ([]byte, error) {
+    var am wire.AuthMessage
+    if err := json.Unmarshal(raw, &am); err != nil {
+        return nil, err
+    }
+    if am.Type != "auth" {
+        return nil, fmt.Errorf("unexpected message type: %s", am.Type)
+    }
+    ok := wire.AuthMessage{Version: "1", Type: "ok"}
+    return json.Marshal(ok)
 }

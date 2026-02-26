@@ -2,13 +2,15 @@ package wire
 
 import (
     "crypto/rand"
-    "crypto/sha256"
 )
 
-// Minimal handshake payload generator using a nonce
-func MakeNonce() []byte {
+// MakeNonceIntArray generates a random 32-byte nonce and returns it as []int (0-255).
+func MakeNonceIntArray() []int {
     b := make([]byte, 32)
     _, _ = rand.Read(b)
-    sum := sha256.Sum256(b)
-    return sum[:]
+    out := make([]int, len(b))
+    for i := range b {
+        out[i] = int(b[i])
+    }
+    return out
 }
