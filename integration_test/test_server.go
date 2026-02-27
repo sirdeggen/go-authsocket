@@ -5,11 +5,9 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/sirdeggen/go-authsocket/authsocket"
-	"github.com/sirdeggen/go-authsocket/authsocket/transport"
 	"github.com/sirdeggen/go-authsocket/internal/wire"
 )
 
